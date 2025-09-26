@@ -1,0 +1,379 @@
+# requirements.txt
+streamlit>=1.28.0
+openai>=0.28.0
+pandas>=2.0.0
+numpy>=1.24.0
+plotly>=5.15.0
+python-docx>=0.8.11
+PyPDF2>=3.0.0
+
+# .streamlit/secrets.toml (Create this file with your actual credentials)
+"""
+[default]
+AZURE_OPENAI_API_KEY = "your_azure_openai_api_key_here"
+AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com/"
+"""
+
+# config.py - Additional configuration options
+import os
+from dataclasses import dataclass
+from typing import Dict, List
+
+@dataclass
+class EstimationConfig:
+    """Configuration class for estimation parameters"""
+    
+    # Azure OpenAI Configuration
+    AZURE_OPENAI_API_KEY: str = os.getenv("AZURE_OPENAI_API_KEY", "")
+    AZURE_OPENAI_ENDPOINT: str = os.getenv("AZURE_OPENAI_ENDPOINT", "")
+    AZURE_OPENAI_API_VERSION: str = "2024-02-15-preview"
+    AZURE_OPENAI_MODEL: str = "gpt-4o-mini"
+    AZURE_OPENAI_EMBEDDING_MODEL: str = "text-embedding-ada-002"
+    
+    # Estimation Matrix - Based on Industry Research
+    ESTIMATION_MATRIX: Dict = None
+    
+    # Industry Multipliers - Based on Forrester and Accenture Research
+    INDUSTRY_MULTIPLIERS: Dict = None
+    
+    # Compliance Multipliers - Based on Regulatory Requirements
+    COMPLIANCE_MULTIPLIERS: Dict = None
+    
+    # Default Hourly Rates (USD)
+    HOURLY_RATES: Dict = None
+    
+    def __post_init__(self):
+        if self.ESTIMATION_MATRIX is None:
+            self.ESTIMATION_MATRIX = {
+                # Model-driven Apps Components (Hours)
+                "entity_simple": {
+                    "base_hours": 3, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 4},
+                    "description": "Simple entity with 5-10 fields, no complex relationships"
+                },
+                "entity_complex": {
+                    "base_hours": 12, 
+                    "multipliers": {"simple": 1, "medium": 1.3, "complex": 2, "very_complex": 3},
+                    "description": "Complex entity with 20+ fields, multiple relationships"
+                },
+                "relationship_1n": {
+                    "base_hours": 1.5, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2, "very_complex": 2.5},
+                    "description": "One-to-many relationship configuration"
+                },
+                "relationship_nn": {
+                    "base_hours": 3, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 3.5},
+                    "description": "Many-to-many relationship with intersection entity"
+                },
+                
+                # Forms and Views
+                "form_simple": {
+                    "base_hours": 3, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 4},
+                    "description": "Simple form with 1-15 fields, basic validation"
+                },
+                "form_complex": {
+                    "base_hours": 12, 
+                    "multipliers": {"simple": 1, "medium": 1.3, "complex": 2, "very_complex": 3},
+                    "description": "Complex form with 30+ fields, business rules, custom controls"
+                },
+                "view_configuration": {
+                    "base_hours": 3.5, 
+                    "multipliers": {"simple": 1, "medium": 1.4, "complex": 2.2, "very_complex": 3.5},
+                    "description": "System views, personal views, and dashboards"
+                },
+                
+                # Business Logic
+                "business_rules": {
+                    "base_hours": 3, 
+                    "multipliers": {"simple": 1, "medium": 2, "complex": 3, "very_complex": 4},
+                    "description": "Business rules for validation and calculations"
+                },
+                "workflows": {
+                    "base_hours": 8, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 4},
+                    "description": "Power Automate workflows and process automation"
+                },
+                "plugins": {
+                    "base_hours": 24, 
+                    "multipliers": {"simple": 1, "medium": 1.8, "complex": 2.5, "very_complex": 3.5},
+                    "description": "Custom plugins for complex business logic"
+                },
+                "pcf_components": {
+                    "base_hours": 48, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.2, "very_complex": 3},
+                    "description": "Power Apps Component Framework custom controls"
+                },
+                
+                # Security and Integration
+                "security_roles": {
+                    "base_hours": 4, 
+                    "multipliers": {"simple": 1, "medium": 2, "complex": 3.5, "very_complex": 5},
+                    "description": "Security roles and field-level permissions"
+                },
+                "standard_connectors": {
+                    "base_hours": 2, 
+                    "multipliers": {"simple": 1, "medium": 1.2, "complex": 1.8, "very_complex": 2.5},
+                    "description": "Standard connectors (SharePoint, Office 365, etc.)"
+                },
+                "custom_connectors": {
+                    "base_hours": 16, 
+                    "multipliers": {"simple": 1, "medium": 2, "complex": 3, "very_complex": 4},
+                    "description": "Custom API connectors with authentication"
+                },
+                "external_integrations": {
+                    "base_hours": 32, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 4},
+                    "description": "Complex external system integrations"
+                },
+                
+                # Canvas Apps
+                "canvas_screens": {
+                    "base_hours": 6, 
+                    "multipliers": {"simple": 1, "medium": 1.8, "complex": 2.8, "very_complex": 4.5},
+                    "description": "Canvas app screens with custom UI"
+                },
+                "canvas_controls": {
+                    "base_hours": 2, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.2, "very_complex": 3.5},
+                    "description": "Custom controls and components in Canvas apps"
+                },
+                
+                # Power Automate
+                "simple_flows": {
+                    "base_hours": 4, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 3.5},
+                    "description": "Simple approval or notification flows"
+                },
+                "complex_flows": {
+                    "base_hours": 12, 
+                    "multipliers": {"simple": 1, "medium": 1.8, "complex": 3, "very_complex": 4.5},
+                    "description": "Complex flows with conditions, loops, error handling"
+                },
+                
+                # Business Process Flows
+                "bpf_simple": {
+                    "base_hours": 6, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.5, "very_complex": 4},
+                    "description": "Simple linear business process flows"
+                },
+                "bpf_complex": {
+                    "base_hours": 24, 
+                    "multipliers": {"simple": 1, "medium": 1.5, "complex": 2.2, "very_complex": 3.5},
+                    "description": "Complex branching business process flows"
+                }
+            }
+        
+        if self.INDUSTRY_MULTIPLIERS is None:
+            self.INDUSTRY_MULTIPLIERS = {
+                "banking_finance": 1.25,    # High compliance and security requirements
+                "healthcare": 1.20,         # HIPAA and regulatory compliance
+                "government": 1.30,         # Strict security and approval processes
+                "manufacturing": 1.10,      # Integration with legacy systems
+                "retail": 1.05,            # Standard complexity
+                "technology": 0.90,        # Tech-savvy teams, modern practices
+                "education": 1.15,         # Budget constraints, change management
+                "insurance": 1.22,         # Regulatory and risk management
+                "energy": 1.18,            # Safety and environmental compliance
+                "other": 1.00              # Baseline
+            }
+        
+        if self.COMPLIANCE_MULTIPLIERS is None:
+            self.COMPLIANCE_MULTIPLIERS = {
+                "none": 1.0,              # No specific compliance requirements
+                "basic": 1.25,            # Basic audit trails and data protection
+                "moderate": 1.5,          # Industry-standard compliance (SOX, etc.)
+                "strict": 1.75,           # Heavy regulatory oversight (HIPAA, PCI-DSS)
+                "enterprise": 2.0         # Multiple compliance frameworks
+            }
+        
+        if self.HOURLY_RATES is None:
+            self.HOURLY_RATES = {
+                "junior_developer": 65,
+                "senior_developer": 95,
+                "power_platform_specialist": 105,
+                "solution_architect": 150,
+                "business_analyst": 95,
+                "project_manager": 120,
+                "technical_lead": 135,
+                "consultant": 175
+            }
+
+# utils.py - Utility functions for the application
+import re
+import json
+from typing import Dict, List, Any, Optional
+import pandas as pd
+
+class BRDParser:
+    """Utility class for parsing Business Requirements Documents"""
+    
+    @staticmethod
+    def extract_entities(text: str) -> List[str]:
+        """Extract potential entity names from text"""
+        # Common patterns for entities
+        patterns = [
+            r'(\w+)\s+entity',
+            r'(\w+)\s+table',
+            r'(\w+)\s+record',
+            r'manage\s+(\w+)',
+            r'track\s+(\w+)',
+            r'(\w+)\s+information'
+        ]
+        
+        entities = set()
+        for pattern in patterns:
+            matches = re.findall(pattern, text.lower())
+            entities.update(matches)
+        
+        # Filter out common words
+        stopwords = {'user', 'data', 'system', 'application', 'information', 'record'}
+        return [entity.title() for entity in entities if entity not in stopwords]
+    
+    @staticmethod
+    def extract_integrations(text: str) -> List[str]:
+        """Extract integration requirements from text"""
+        integration_keywords = [
+            'sharepoint', 'office 365', 'teams', 'outlook', 'excel',
+            'salesforce', 'dynamics', 'sap', 'oracle', 'api',
+            'rest', 'soap', 'web service', 'database', 'sql server'
+        ]
+        
+        integrations = []
+        text_lower = text.lower()
+        
+        for keyword in integration_keywords:
+            if keyword in text_lower:
+                integrations.append(keyword.title())
+        
+        return list(set(integrations))
+    
+    @staticmethod
+    def assess_complexity_indicators(text: str) -> Dict[str, int]:
+        """Assess complexity indicators in the text"""
+        complexity_keywords = {
+            'simple': ['basic', 'simple', 'standard', 'minimal'],
+            'medium': ['moderate', 'average', 'typical', 'normal'],
+            'complex': ['complex', 'advanced', 'sophisticated', 'detailed'],
+            'very_complex': ['very complex', 'highly complex', 'enterprise', 'critical']
+        }
+        
+        scores = {level: 0 for level in complexity_keywords}
+        text_lower = text.lower()
+        
+        for level, keywords in complexity_keywords.items():
+            for keyword in keywords:
+                scores[level] += text_lower.count(keyword)
+        
+        return scores
+
+class EstimationValidator:
+    """Utility class for validating and adjusting estimates"""
+    
+    @staticmethod
+    def validate_estimate_ranges(estimate_hours: float, component_count: int) -> Dict[str, Any]:
+        """Validate if estimates are within reasonable ranges"""
+        validation = {
+            "is_valid": True,
+            "warnings": [],
+            "recommendations": []
+        }
+        
+        # Hours per component ratio
+        avg_hours_per_component = estimate_hours / max(component_count, 1)
+        
+        if avg_hours_per_component < 2:
+            validation["warnings"].append("Very low hours per component - consider if all complexity is captured")
+        elif avg_hours_per_component > 50:
+            validation["warnings"].append("High hours per component - consider breaking down into smaller components")
+        
+        # Total project size validation
+        if estimate_hours < 40:
+            validation["recommendations"].append("Small project - consider minimum viable product approach")
+        elif estimate_hours > 2000:
+            validation["warnings"].append("Large project - strongly recommend phased approach")
+            validation["recommendations"].append("Break into multiple phases of 3-6 months each")
+        
+        # Timeline validation
+        weeks = estimate_hours / 30  # 30 productive hours per week
+        if weeks > 52:
+            validation["warnings"].append("Project exceeds 1 year - high risk of requirement changes")
+        
+        return validation
+    
+    @staticmethod
+    def calculate_confidence_score(components: List, brd_length: int) -> Tuple[str, float]:
+        """Calculate confidence score based on various factors"""
+        score = 100.0
+        
+        # Reduce confidence based on component count
+        if len(components) > 20:
+            score -= 20
+        elif len(components) > 10:
+            score -= 10
+        
+        # Reduce confidence based on BRD detail level
+        if brd_length < 500:  # Very short BRD
+            score -= 30
+        elif brd_length < 1000:  # Short BRD
+            score -= 15
+        
+        # Reduce confidence for high complexity components
+        high_complexity_count = sum(1 for comp in components if 
+                                   hasattr(comp, 'complexity') and 
+                                   comp.complexity.value >= 3)
+        
+        if high_complexity_count > len(components) * 0.5:
+            score -= 15
+        
+        # Convert to confidence level
+        if score >= 80:
+            return "High", score
+        elif score >= 60:
+            return "Medium", score
+        else:
+            return "Low", score
+
+# Run the application with: streamlit run power_platform_estimator.py
+# Make sure to configure your Azure OpenAI credentials in .streamlit/secrets.toml
+
+"""
+Setup Instructions:
+==================
+
+1. Install dependencies:
+   pip install -r requirements.txt
+
+2. Create .streamlit/secrets.toml file with your Azure OpenAI credentials:
+   [default]
+   AZURE_OPENAI_API_KEY = "your_api_key_here"
+   AZURE_OPENAI_ENDPOINT = "https://your-resource.openai.azure.com/"
+
+3. Run the application:
+   streamlit run power_platform_estimator.py
+
+4. For production deployment, consider:
+   - Using Azure Key Vault for credential management
+   - Implementing user authentication
+   - Adding logging and monitoring
+   - Setting up CI/CD pipeline
+
+Features:
+=========
+- AI-powered BRD analysis using Azure OpenAI GPT-4o-mini
+- Industry-standard estimation matrices based on research
+- COSMIC Function Points calculation
+- Interactive visualization with Plotly
+- Export functionality for reports
+- Manual override capabilities
+- Risk assessment and recommendations
+- Timeline and cost projections
+
+The tool follows the research framework provided and implements:
+- Component-based estimation
+- Industry and compliance multipliers
+- Scientific approaches (COSMIC FP)
+- Risk-adjusted calculations
+- Confidence scoring
+"""
